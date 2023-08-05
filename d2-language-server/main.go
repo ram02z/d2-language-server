@@ -1,32 +1,29 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/ram02z/d2-language-server/internal/lsp"
 	"github.com/spf13/cobra"
-	"github.com/tliron/commonlog"
-	_ "github.com/tliron/commonlog/simple"
 	serverpkg "github.com/tliron/glsp/server"
 )
 
 var debug bool
 
 func main() {
-	commonlog.Configure(1, nil)
 
 	var cmd = &cobra.Command{
 		Use: lsp.Name,
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			if debug {
-				commonlog.SetMaxLevel(nil, commonlog.Debug)
+				// TODO: use logger
 			}
 		},
 		Run: func(_ *cobra.Command, _ []string) {
 			err := run()
 			if err != nil {
-				log.Error(err.Error())
-				os.Exit(1)
+				log.Fatal(err.Error())
 			}
 		},
 		Version: lsp.Version,
