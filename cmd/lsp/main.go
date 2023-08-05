@@ -6,15 +6,22 @@ import (
 
 	"github.com/ram02z/d2-language-server/internal/lsp"
 	"github.com/spf13/cobra"
+	"github.com/tliron/commonlog"
+	serverpkg "github.com/tliron/glsp/server"
 )
 
-const lsName = "d2-language-server"
-
-var lsVersion string = "0.0.1"
+var debug bool
 
 func main() {
+	commonlog.Configure(1, nil)
+
 	var cmd = &cobra.Command{
-		Use: lsName,
+		Use: lsp.Name,
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
+			if debug {
+				commonlog.SetMaxLevel(nil, commonlog.Debug)
+			}
+		},
 		Run: func(_ *cobra.Command, _ []string) {
 			err := run()
 			if err != nil {
@@ -22,9 +29,10 @@ func main() {
 				os.Exit(1)
 			}
 		},
+		Version: lsp.Version,
 	}
 
-	cmd.Version = lsVersion
+	cmd.Flags().BoolVarP(&debug, "debug", "d", false, "increase verbosity of log messages")
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(0)
@@ -32,10 +40,6 @@ func main() {
 }
 
 func run() error {
-	server := lsp.NewServer(lsp.ServerOpts{
-		Name:    lsName,
-		Version: lsVersion,
-	})
-
-	return server.Run()
+	server := serverpkg.NewServer(&lsp.Handler, lsp.Name, debug)
+	return server.RunStdio()
 }
