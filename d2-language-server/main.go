@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ram02z/d2-language-server/internal/lsp"
 	"github.com/spf13/cobra"
 	"github.com/tliron/commonlog"
+	_ "github.com/tliron/commonlog/simple"
 	serverpkg "github.com/tliron/glsp/server"
 )
 
@@ -25,7 +25,7 @@ func main() {
 		Run: func(_ *cobra.Command, _ []string) {
 			err := run()
 			if err != nil {
-				fmt.Fprint(os.Stderr, err.Error())
+				log.Error(err.Error())
 				os.Exit(1)
 			}
 		},
