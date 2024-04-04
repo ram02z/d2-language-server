@@ -22,3 +22,10 @@ func NewResponse(id int) Response {
 		ID:  &id,
 	}
 }
+
+func NewNotification(method Method) Notification {
+	return Notification{
+		RPC:    JsonRpc,
+		Method: string(method),
+	}
+}
