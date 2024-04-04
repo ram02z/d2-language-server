@@ -1,9 +1,10 @@
 package analysis
 
 import (
-	"github.com/ram02z/d2-language-server/lsp"
+	"context"
 	"fmt"
-	"strings"
+	"github.com/ram02z/d2-language-server/lsp"
+	"oss.terrastruct.com/d2/d2lib"
 )
 
 type State struct {
@@ -30,17 +31,28 @@ func LineRange(line, start, end int) lsp.Range {
 }
 
 func getDiagnosticsForFile(text string) []lsp.Diagnostic {
-	var diagnostics []lsp.Diagnostic
-	for row, line := range strings.Split(text, "\n") {
-		if strings.Contains(line, "-->") {
-			idx := strings.Index(line, "-->")
-			diagnostics = append(diagnostics, lsp.Diagnostic{
-				Source:   lsp.Name,
-				Message:  "Invalid connection",
-				Range:    LineRange(row, idx, idx+len("-->")),
-				Severity: 1,
-			})
-		}
+	diagnostics := []lsp.Diagnostic{}
+	ctx := context.Background()
+	_, err := d2lib.Parse(ctx, text, &d2lib.CompileOptions{
+		UTF16Pos: true,
+	})
+
+	if err != nil {
+		diagnostics = append(diagnostics, lsp.Diagnostic{
+			Source:  lsp.Name,
+			Message: err.Error(),
+			Range: lsp.Range{
+				Start: lsp.Position{
+					Line:      0,
+					Character: 0,
+				},
+				End: lsp.Position{
+					Line:      0,
+					Character: 0,
+				},
+			},
+			Severity: lsp.Error,
+		})
 	}
 
 	return diagnostics
@@ -52,10 +64,12 @@ func (s *State) OpenDocument(uri, text string) []lsp.Diagnostic {
 	return getDiagnosticsForFile(text)
 }
 
-func (s *State) UpdateDocument(uri, text string) []lsp.Diagnostic {
+func (s *State) UpdateDocument(uri, text string) {
 	s.Documents[uri] = text
+}
 
-	return getDiagnosticsForFile(text)
+func (s *State) ParseDocument(uri string) []lsp.Diagnostic {
+	return getDiagnosticsForFile(s.Documents[uri])
 }
 
 func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverResponse {
