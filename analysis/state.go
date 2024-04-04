@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ram02z/d2-language-server/lsp"
 	"oss.terrastruct.com/d2/d2lib"
+	"oss.terrastruct.com/d2/d2parser"
 )
 
 type State struct {
@@ -38,21 +39,24 @@ func getDiagnosticsForFile(text string) []lsp.Diagnostic {
 	})
 
 	if err != nil {
-		diagnostics = append(diagnostics, lsp.Diagnostic{
-			Source:  lsp.Name,
-			Message: err.Error(),
-			Range: lsp.Range{
-				Start: lsp.Position{
-					Line:      0,
-					Character: 0,
+		parserErrors := err.(*d2parser.ParseError).Errors
+		for _, err := range parserErrors {
+			diagnostics = append(diagnostics, lsp.Diagnostic{
+				Source:  lsp.Name,
+				Message: err.Message,
+				Range: lsp.Range{
+					Start: lsp.Position{
+						Line:      err.Range.Start.Line,
+						Character: err.Range.Start.Column,
+					},
+					End: lsp.Position{
+						Line:      err.Range.End.Line,
+						Character: err.Range.End.Column,
+					},
 				},
-				End: lsp.Position{
-					Line:      0,
-					Character: 0,
-				},
-			},
-			Severity: lsp.Error,
-		})
+				Severity: lsp.Error,
+			})
+		}
 	}
 
 	return diagnostics
