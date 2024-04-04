@@ -3,18 +3,17 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/ram02z/d2-language-server/analysis"
+	"github.com/ram02z/d2-language-server/log"
 	"github.com/ram02z/d2-language-server/lsp"
 	"github.com/ram02z/d2-language-server/rpc"
 )
 
 func main() {
-	logger := getLogger("/root/src/d2-language-server/log.txt")
+	logger := log.NewLogger(lsp.Name)
 	logger.Println("started lsp")
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -133,13 +132,4 @@ func handleMessage(
 func writeResponse(writer io.Writer, msg any) {
 	reply := rpc.EncodeMessage(msg)
 	writer.Write([]byte(reply))
-}
-
-func getLogger(fileName string) *log.Logger {
-	logfile, err := os.OpenFile(fileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
-	if err != nil {
-		panic("file does not exist")
-	}
-
-	return log.New(logfile, fmt.Sprintf("[%s] ", lsp.Name), log.Ldate|log.Ltime|log.Lshortfile)
 }
