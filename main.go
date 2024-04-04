@@ -2,13 +2,15 @@ package main
 
 import (
 	"bufio"
-	"d2ls/analysis"
-	"d2ls/lsp"
-	"d2ls/rpc"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"os"
+
+	"github.com/ram02z/d2-language-server/analysis"
+	"github.com/ram02z/d2-language-server/lsp"
+	"github.com/ram02z/d2-language-server/rpc"
 )
 
 func main() {
@@ -139,5 +141,5 @@ func getLogger(fileName string) *log.Logger {
 		panic("file does not exist")
 	}
 
-	return log.New(logfile, "[d2ls] ", log.Ldate|log.Ltime|log.Lshortfile)
+	return log.New(logfile, fmt.Sprintf("[%s] ", lsp.Name), log.Ldate|log.Ltime|log.Lshortfile)
 }

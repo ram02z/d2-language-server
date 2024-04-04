@@ -1,7 +1,7 @@
 package analysis
 
 import (
-	"d2ls/lsp"
+	"github.com/ram02z/d2-language-server/lsp"
 	"fmt"
 	"strings"
 )
@@ -35,7 +35,7 @@ func getDiagnosticsForFile(text string) []lsp.Diagnostic {
 		if strings.Contains(line, "-->") {
 			idx := strings.Index(line, "-->")
 			diagnostics = append(diagnostics, lsp.Diagnostic{
-				Source:   "d2ls",
+				Source:   lsp.Name,
 				Message:  "Invalid connection",
 				Range:    LineRange(row, idx, idx+len("-->")),
 				Severity: 1,

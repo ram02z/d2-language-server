@@ -1,7 +1,7 @@
 package rpc_test
 
 import (
-	"d2ls/rpc"
+	"github.com/ram02z/d2-language-server/rpc"
 	"testing"
 )
 
