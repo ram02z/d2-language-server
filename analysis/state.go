@@ -68,12 +68,10 @@ func (s *State) OpenDocument(uri, text string) []lsp.Diagnostic {
 	return getDiagnosticsForFile(text)
 }
 
-func (s *State) UpdateDocument(uri, text string) {
+func (s *State) UpdateDocument(uri, text string) []lsp.Diagnostic {
 	s.Documents[uri] = text
-}
 
-func (s *State) ParseDocument(uri string) []lsp.Diagnostic {
-	return getDiagnosticsForFile(s.Documents[uri])
+	return getDiagnosticsForFile(text)
 }
 
 func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverResponse {

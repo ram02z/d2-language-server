@@ -18,7 +18,6 @@ var handlers = map[lsp.Method]HandlerFunc{
 	lsp.Initialize:            handleInitialize,
 	lsp.DidOpenTextDocument:   handleDidOpenTextDocument,
 	lsp.DidChangeTextDocument: handleDidChangeTextDocument,
-	lsp.DidSaveTextDocument:   handleDidSaveTextDocument,
 	lsp.Hover:                 handleHover,
 	lsp.Definition:            handleDefinition,
 	lsp.Completion:            handleCompletion,
@@ -85,28 +84,12 @@ func handleDidChangeTextDocument(logger *log.Logger, writer io.Writer, state ana
 	}
 
 	logger.Printf("Changed: %s", request.Params.TextDocument.URI)
-	for _, change := range request.Params.ContentChanges {
-		state.UpdateDocument(request.Params.TextDocument.URI, change.Text)
+	diagnostics := make([]lsp.Diagnostic, 0)
+	contentChangesLen := len(request.Params.ContentChanges)
+	if contentChangesLen > 0 {
+		lastChangeEvent := request.Params.ContentChanges[contentChangesLen-1]
+		diagnostics = append(diagnostics, state.UpdateDocument(request.Params.TextDocument.URI, lastChangeEvent.Text)...)
 	}
-	writeResponse(writer, lsp.PublishDiagnosticsNotification{
-		Notification: lsp.NewNotification(lsp.PublishDiagnostics),
-		Params: lsp.PublishDiagnosticsParams{
-			URI:         request.Params.TextDocument.URI,
-			Diagnostics: []lsp.Diagnostic{},
-		},
-	})
-
-}
-
-func handleDidSaveTextDocument(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
-	var request lsp.DidSaveTextDocumentNotification
-	if err := json.Unmarshal(contents, &request); err != nil {
-		logger.Printf("error parsing %s request: %s", lsp.DidSaveTextDocument, err)
-		return
-	}
-
-	logger.Printf("Saved: %s", request.Params.TextDocument.URI)
-	diagnostics := state.ParseDocument(request.Params.TextDocument.URI)
 	writeResponse(writer, lsp.PublishDiagnosticsNotification{
 		Notification: lsp.NewNotification(lsp.PublishDiagnostics),
 		Params: lsp.PublishDiagnosticsParams{
@@ -115,7 +98,6 @@ func handleDidSaveTextDocument(logger *log.Logger, writer io.Writer, state analy
 		},
 	})
 	logger.Printf("Published %d diagnostics", len(diagnostics))
-
 }
 
 func handleHover(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
@@ -176,4 +158,3 @@ func main() {
 		handleMessage(logger, writer, state, method, contents)
 	}
 }
-
