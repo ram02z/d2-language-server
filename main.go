@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 
@@ -146,9 +147,17 @@ func handleFormatting(logger *log.Logger, writer io.Writer, state analysis.State
 	logger.Printf("Formatted: %s", request.Params.TextDocument.URI)
 }
 
-func writeResponse(writer io.Writer, msg any) {
-	reply := rpc.EncodeMessage(msg)
-	writer.Write([]byte(reply))
+func writeResponse(writer io.Writer, msg any) error {
+	reply, err := rpc.EncodeMessage(msg)
+	if err != nil {
+		return fmt.Errorf("failed to encode messaged: %w", err)
+	}
+	_, err = writer.Write([]byte(reply))
+	if err != nil {
+		return fmt.Errorf("failed to write message: %w", err)
+	}
+
+	return nil
 }
 
 func main() {

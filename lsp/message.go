@@ -7,8 +7,15 @@ type Request struct {
 }
 
 type Response struct {
-	ID  *int   `json:"id,omitempty"`
-	RPC string `json:"jsonrpc"`
+	RPC   string         `json:"jsonrpc"`
+	ID    *int           `json:"id,omitempty"`
+	Error *ResponseError `json:"error,omitempty"`
+}
+
+type ResponseError struct {
+	Code    ErrorCode   `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
 type Notification struct {

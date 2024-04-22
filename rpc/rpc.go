@@ -8,14 +8,13 @@ import (
 	"strconv"
 )
 
-func EncodeMessage(msg any) string {
+func EncodeMessage(msg any) (string, error) {
 	content, err := json.Marshal(msg)
 	if err != nil {
-		// NOTE: handle this gracefully
-		panic(err)
+		return "", err
 	}
 
-	return fmt.Sprintf("Content-Length: %d\r\n\r\n%s", len(content), content)
+	return fmt.Sprintf("Content-Length: %d\r\n\r\n%s", len(content), content), nil
 }
 
 type BaseMessage struct {
