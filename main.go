@@ -21,6 +21,7 @@ var handlers = map[lsp.Method]HandlerFunc{
 	lsp.Hover:                 handleHover,
 	lsp.Definition:            handleDefinition,
 	lsp.Completion:            handleCompletion,
+	lsp.Formatting:            handleFormatting,
 }
 
 func handleMessage(
@@ -130,6 +131,17 @@ func handleCompletion(logger *log.Logger, writer io.Writer, state analysis.State
 	}
 
 	msg := state.TextDocumentCompletion(request.ID, request.Params.TextDocument.URI, request.Params.Position)
+	writeResponse(writer, msg)
+}
+
+func handleFormatting(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
+	var request lsp.FormattingRequest
+	if err := json.Unmarshal(contents, &request); err != nil {
+		logger.Printf("error parsing %s request: %s", lsp.Formatting, err)
+		return
+	}
+
+	msg := state.Format(request.ID, request.Params.TextDocument.URI)
 	writeResponse(writer, msg)
 }
 

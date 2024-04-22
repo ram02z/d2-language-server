@@ -25,10 +25,11 @@ type InitializeResult struct {
 }
 
 type ServerCapabilities struct {
-	CompletionProvider map[string]any `json:"completionProvider"`
-	TextDocumentSync   int            `json:"textDocumentSync"`
-	HoverProvider      bool           `json:"hoverProvider"`
-	DefinitionProvider bool           `json:"definitionProvider"`
+	CompletionProvider         map[string]any `json:"completionProvider"`
+	TextDocumentSync           int            `json:"textDocumentSync"`
+	HoverProvider              bool           `json:"hoverProvider"`
+	DefinitionProvider         bool           `json:"definitionProvider"`
+	DocumentFormattingProvider bool           `json:"documentFormattingProvider"`
 }
 
 type ServerInfo struct {
@@ -41,10 +42,11 @@ func NewInitializeResponse(id int) InitializeResponse {
 		Response: NewResponse(id),
 		Result: InitializeResult{
 			Capabilities: ServerCapabilities{
-				TextDocumentSync:   1,
-				HoverProvider:      true,
-				DefinitionProvider: true,
-				CompletionProvider: map[string]any{},
+				TextDocumentSync:           1,
+				HoverProvider:              true,
+				DefinitionProvider:         true,
+				CompletionProvider:         map[string]any{},
+				DocumentFormattingProvider: true,
 			},
 			ServerInfo: ServerInfo{
 				Name:    Name,

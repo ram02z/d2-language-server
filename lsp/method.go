@@ -1,6 +1,5 @@
 package lsp
 
-
 type Method string
 
 const (
@@ -12,4 +11,5 @@ const (
 	Hover                 Method = "textDocument/hover"
 	Definition            Method = "textDocument/definition"
 	Completion            Method = "textDocument/completion"
+	Formatting            Method = "textDocument/formatting"
 )
