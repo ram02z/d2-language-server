@@ -3,6 +3,7 @@ package analysis_test
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/ram02z/d2-language-server/analysis"
 	"github.com/ram02z/d2-language-server/lsp"
 )
@@ -95,21 +96,9 @@ func TestComputeTextEdits(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			actual := analysis.ComputeTextEdits(test.before, test.after)
-			if !equalTextEdits(actual, test.expected) {
-				t.Errorf("ComputeTextEdits(%q, %q) = %v, expected %v", test.before, test.after, actual, test.expected)
+			if diff := cmp.Diff(actual, test.expected); diff != "" {
+				t.Errorf("ComputeTextEdits(%q, %q) mismatch (-want +got):\n%s", test.before, test.after, diff)
 			}
 		})
 	}
-}
-
-func equalTextEdits(a, b []lsp.TextEdit) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
