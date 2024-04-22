@@ -2,7 +2,6 @@ package analysis
 
 import (
 	"context"
-	"strings"
 
 	"github.com/ram02z/d2-language-server/lsp"
 	"oss.terrastruct.com/d2/d2ast"
@@ -164,31 +163,11 @@ func (s *State) TextDocumentCompletion(id int, uri string, position lsp.Position
 	return response
 }
 
-func getTextRange(text string) lsp.Range {
-	lines := strings.Split(text, "\n")
-	lastLineLength := len(lines[len(lines)-1])
-
-	start := lsp.Position{Line: 0, Character: 0}
-	end := lsp.Position{Line: len(lines) - 1, Character: lastLineLength}
-
-	return lsp.Range{
-		Start: start,
-		End:   end,
-	}
-}
-
 func (s *State) Format(id int, uri string) lsp.FormattingResponse {
 	document := s.Documents[uri]
 
-	var result []lsp.TextEdit
 	formattedText := d2format.Format(document.AST)
-	// TODO: calculate diff rather than make it one big text edit
-	if document.Text != formattedText {
-		result = append(result, lsp.TextEdit{
-			Range:   getTextRange(document.Text),
-			NewText: formattedText,
-		})
-	}
+	result := ComputeTextEdits(document.Text, formattedText)
 
 	response := lsp.FormattingResponse{
 		Response: lsp.NewResponse(id),

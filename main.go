@@ -143,6 +143,7 @@ func handleFormatting(logger *log.Logger, writer io.Writer, state analysis.State
 
 	msg := state.Format(request.ID, request.Params.TextDocument.URI)
 	writeResponse(writer, msg)
+	logger.Printf("Formatted: %s", request.Params.TextDocument.URI)
 }
 
 func writeResponse(writer io.Writer, msg any) {

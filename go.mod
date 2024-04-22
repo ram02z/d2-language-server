@@ -2,7 +2,10 @@ module github.com/ram02z/d2-language-server
 
 go 1.22.0
 
-require oss.terrastruct.com/d2 v0.6.3
+require (
+	github.com/akedrou/textdiff v0.0.0-20230423230343-2ebdcebdccc1
+	oss.terrastruct.com/d2 v0.6.3
+)
 
 require (
 	cdr.dev/slog v1.4.2-0.20221206192828-e4803b10ae17 // indirect
