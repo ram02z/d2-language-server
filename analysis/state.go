@@ -62,6 +62,10 @@ func (s *State) UpdateDocument(uri, text string) []lsp.Diagnostic {
 	return getDiagnosticsFromAST(document.Errors)
 }
 
+func (s *State) RemoveDocument(uri string) {
+	delete(s.Documents, uri)
+}
+
 func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverResponse {
 	document := s.Documents[uri]
 	node := getNodeUnderCursor(*document.AST, position)

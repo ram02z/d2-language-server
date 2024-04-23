@@ -6,7 +6,7 @@ const (
 	Initialize                Method = "initialize"
 	DidOpenTextDocument       Method = "textDocument/didOpen"
 	DidChangeTextDocument     Method = "textDocument/didChange"
-	DidSaveTextDocument       Method = "textDocument/didSave"
+	DidCloseTextDocument      Method = "textDocument/didClose"
 	PublishDiagnostics        Method = "textDocument/publishDiagnostics"
 	Hover                     Method = "textDocument/hover"
 	Definition                Method = "textDocument/definition"

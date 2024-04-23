@@ -19,6 +19,7 @@ var handlers = map[lsp.Method]HandlerFunc{
 	lsp.Initialize:                handleInitialize,
 	lsp.DidOpenTextDocument:       handleDidOpenTextDocument,
 	lsp.DidChangeTextDocument:     handleDidChangeTextDocument,
+	lsp.DidCloseTextDocument:      handleDidCloseTextDocument,
 	lsp.Hover:                     handleHover,
 	lsp.Definition:                handleDefinition,
 	lsp.Completion:                handleCompletion,
@@ -71,7 +72,7 @@ func handleDidOpenTextDocument(logger *log.Logger, writer io.Writer, state analy
 		return
 	}
 
-	logger.Printf("opened: %s", request.Params.TextDocument.URI)
+	logger.Printf("opened document: %s", request.Params.TextDocument.URI)
 	diagnostics := state.OpenDocument(request.Params.TextDocument.URI, request.Params.TextDocument.Text)
 	writeResponse(writer, lsp.PublishDiagnosticsNotification{
 		Notification: lsp.NewNotification(lsp.PublishDiagnostics),
@@ -106,6 +107,17 @@ func handleDidChangeTextDocument(logger *log.Logger, writer io.Writer, state ana
 		},
 	})
 	logger.Printf("published %d diagnostics", len(diagnostics))
+}
+
+func handleDidCloseTextDocument(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
+	var request lsp.DidCloseTextDocumentNotification
+	if err := json.Unmarshal(contents, &request); err != nil {
+		logger.Printf("error parsing %s request: %s", lsp.DidChangeTextDocument, err)
+		return
+	}
+
+	logger.Printf("closed document: %s", request.Params.TextDocument.URI)
+	state.RemoveDocument(request.Params.TextDocument.URI)
 }
 
 func handleHover(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
@@ -156,12 +168,12 @@ func handleFormatting(logger *log.Logger, writer io.Writer, state analysis.State
 func handleDidChangeWorkspaceFolders(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
 	var request lsp.DidChangeWorkspaceFoldersNotifications
 	if err := json.Unmarshal(contents, &request); err != nil {
-		logger.Printf("error parsing %s request: %s", lsp.DidChangeTextDocument, err)
+		logger.Printf("error parsing %s request: %s", lsp.DidChangeWorkspaceFolders, err)
 		return
 	}
 
 	logger.Printf(
-		"changed workspace: +%d folders, - %d folders",
+		"changed workspace: +%d folders, -%d folders",
 		len(request.Params.Event.Added),
 		len(request.Params.Event.Removed),
 	)
