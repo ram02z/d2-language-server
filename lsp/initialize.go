@@ -25,11 +25,16 @@ type InitializeResult struct {
 }
 
 type ServerCapabilities struct {
-	CompletionProvider         map[string]any `json:"completionProvider"`
-	TextDocumentSync           int            `json:"textDocumentSync"`
-	HoverProvider              bool           `json:"hoverProvider"`
-	DefinitionProvider         bool           `json:"definitionProvider"`
-	DocumentFormattingProvider bool           `json:"documentFormattingProvider"`
+	CompletionProvider         CompletionOptions `json:"completionProvider"`
+	TextDocumentSync           int               `json:"textDocumentSync"`
+	HoverProvider              bool              `json:"hoverProvider"`
+	DefinitionProvider         bool              `json:"definitionProvider"`
+	DocumentFormattingProvider bool              `json:"documentFormattingProvider"`
+}
+
+type CompletionOptions struct {
+	TriggerCharacters []string `json:"triggerCharacters"`
+	ResolveProvider   bool     `json:"resolveProvider"`
 }
 
 type ServerInfo struct {
@@ -42,10 +47,14 @@ func NewInitializeResponse(id int) InitializeResponse {
 		Response: NewResponse(id),
 		Result: InitializeResult{
 			Capabilities: ServerCapabilities{
-				TextDocumentSync:           1,
-				HoverProvider:              true,
-				DefinitionProvider:         true,
-				CompletionProvider:         map[string]any{},
+				// Documents are synced by always sending the full content of the document
+				TextDocumentSync:   1,
+				HoverProvider:      true,
+				DefinitionProvider: true,
+				CompletionProvider: CompletionOptions{
+					TriggerCharacters: []string{".", ":", "@"},
+					ResolveProvider: true,
+				},
 				DocumentFormattingProvider: true,
 			},
 			ServerInfo: ServerInfo{
