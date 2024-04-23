@@ -3,6 +3,7 @@ package analysis
 import (
 	"context"
 
+	"github.com/ram02z/d2-language-server/log"
 	"github.com/ram02z/d2-language-server/lsp"
 	"oss.terrastruct.com/d2/d2ast"
 	"oss.terrastruct.com/d2/d2format"
@@ -12,6 +13,9 @@ import (
 
 type State struct {
 	Documents map[string]Document
+	// URI: Name
+	WorkspaceFolders map[string]string
+	logger           *log.Logger
 }
 
 type Document struct {
@@ -20,78 +24,26 @@ type Document struct {
 	Errors []d2ast.Error
 }
 
-func NewState() State {
+func NewState(logger *log.Logger) State {
 	return State{
-		Documents: map[string]Document{},
+		Documents:        map[string]Document{},
+		WorkspaceFolders: map[string]string{},
+		logger:           logger,
 	}
 }
 
-func LineRange(line, start, end int) lsp.Range {
-	return lsp.Range{
-		Start: lsp.Position{
-			Line:      line,
-			Character: start,
-		},
-		End: lsp.Position{
-			Line:      line,
-			Character: end,
-		},
+func (s *State) AddWorkspaceFolders(folders []lsp.WorkspaceFolder) {
+	for _, folder := range folders {
+		s.WorkspaceFolders[folder.URI] = folder.Name
+		s.logger.Printf("added '%s' to workspace", folder.URI)
 	}
 }
 
-func getDiagnosticsFromAST(errors []d2ast.Error) []lsp.Diagnostic {
-	diagnostics := []lsp.Diagnostic{}
-
-	for _, err := range errors {
-		diagnostics = append(diagnostics, lsp.Diagnostic{
-			Source:  lsp.Name,
-			Message: err.Message,
-			Range: lsp.Range{
-				Start: lsp.Position{
-					Line:      err.Range.Start.Line,
-					Character: err.Range.Start.Column,
-				},
-				End: lsp.Position{
-					Line:      err.Range.End.Line,
-					Character: err.Range.End.Column,
-				},
-			},
-			Severity: lsp.Error,
-		})
+func (s *State) RemoveWorkspaceFolders(folders []lsp.WorkspaceFolder) {
+	for _, folder := range folders {
+		delete(s.WorkspaceFolders, folder.URI)
+		s.logger.Printf("removed '%s' from workspace", folder.URI)
 	}
-
-	return diagnostics
-}
-
-func parseDocument(ctx context.Context, text string) Document {
-	ast, err := d2lib.Parse(ctx, text, &d2lib.CompileOptions{
-		UTF16Pos: true,
-	})
-
-	errors := []d2ast.Error{}
-	if err != nil {
-
-		errors = err.(*d2parser.ParseError).Errors
-	}
-
-	return Document{
-		Text:   text,
-		AST:    ast,
-		Errors: errors,
-	}
-}
-
-func getNodeUnderCursor(ast d2ast.Map, position lsp.Position) *d2ast.MapNode {
-	for _, nodeBox := range ast.Nodes {
-		node := nodeBox.Unbox()
-		nodeRange := node.GetRange()
-		if position.Line >= nodeRange.Start.Line && position.Line <= nodeRange.End.Line &&
-			position.Character >= nodeRange.Start.Column && position.Character <= nodeRange.End.Column {
-			return &node
-		}
-	}
-
-	return nil
 }
 
 func (s *State) OpenDocument(uri, text string) []lsp.Diagnostic {
@@ -175,4 +127,59 @@ func (s *State) Format(id int, uri string) lsp.FormattingResponse {
 	}
 
 	return response
+}
+
+func getDiagnosticsFromAST(errors []d2ast.Error) []lsp.Diagnostic {
+	diagnostics := []lsp.Diagnostic{}
+
+	for _, err := range errors {
+		diagnostics = append(diagnostics, lsp.Diagnostic{
+			Source:  lsp.Name,
+			Message: err.Message,
+			Range: lsp.Range{
+				Start: lsp.Position{
+					Line:      err.Range.Start.Line,
+					Character: err.Range.Start.Column,
+				},
+				End: lsp.Position{
+					Line:      err.Range.End.Line,
+					Character: err.Range.End.Column,
+				},
+			},
+			Severity: lsp.Error,
+		})
+	}
+
+	return diagnostics
+}
+
+func parseDocument(ctx context.Context, text string) Document {
+	ast, err := d2lib.Parse(ctx, text, &d2lib.CompileOptions{
+		UTF16Pos: true,
+	})
+
+	errors := []d2ast.Error{}
+	if err != nil {
+
+		errors = err.(*d2parser.ParseError).Errors
+	}
+
+	return Document{
+		Text:   text,
+		AST:    ast,
+		Errors: errors,
+	}
+}
+
+func getNodeUnderCursor(ast d2ast.Map, position lsp.Position) *d2ast.MapNode {
+	for _, nodeBox := range ast.Nodes {
+		node := nodeBox.Unbox()
+		nodeRange := node.GetRange()
+		if position.Line >= nodeRange.Start.Line && position.Line <= nodeRange.End.Line &&
+			position.Character >= nodeRange.Start.Column && position.Character <= nodeRange.End.Column {
+			return &node
+		}
+	}
+
+	return nil
 }

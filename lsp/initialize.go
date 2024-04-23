@@ -6,7 +6,8 @@ type InitializeRequest struct {
 }
 
 type InitializeRequestParams struct {
-	ClientInfo *ClientInfo `json:"clientInfo"`
+	ClientInfo       *ClientInfo       `json:"clientInfo"`
+	WorkspaceFolders []WorkspaceFolder `json:"workspaceFolders"`
 }
 
 type ClientInfo struct {
@@ -25,11 +26,12 @@ type InitializeResult struct {
 }
 
 type ServerCapabilities struct {
-	CompletionProvider         CompletionOptions `json:"completionProvider"`
 	TextDocumentSync           int               `json:"textDocumentSync"`
+	CompletionProvider         CompletionOptions `json:"completionProvider"`
 	HoverProvider              bool              `json:"hoverProvider"`
 	DefinitionProvider         bool              `json:"definitionProvider"`
 	DocumentFormattingProvider bool              `json:"documentFormattingProvider"`
+	Workspace                  Workspace         `json:"workspace"`
 }
 
 type CompletionOptions struct {
@@ -48,14 +50,20 @@ func NewInitializeResponse(id int) InitializeResponse {
 		Result: InitializeResult{
 			Capabilities: ServerCapabilities{
 				// Documents are synced by always sending the full content of the document
-				TextDocumentSync:   1,
-				HoverProvider:      true,
-				DefinitionProvider: true,
+				TextDocumentSync: 1,
 				CompletionProvider: CompletionOptions{
 					TriggerCharacters: []string{".", ":", "@"},
-					ResolveProvider: true,
+					ResolveProvider:   true,
 				},
+				HoverProvider:              true,
+				DefinitionProvider:         true,
 				DocumentFormattingProvider: true,
+				Workspace: Workspace{
+					WorkspaceFolders: WorkspaceFoldersServerCapabilities{
+						Supported: true,
+						ChangeNotifications: true,
+					},
+				},
 			},
 			ServerInfo: ServerInfo{
 				Name:    Name,

@@ -16,13 +16,14 @@ import (
 type HandlerFunc func(*log.Logger, io.Writer, analysis.State, []byte)
 
 var handlers = map[lsp.Method]HandlerFunc{
-	lsp.Initialize:            handleInitialize,
-	lsp.DidOpenTextDocument:   handleDidOpenTextDocument,
-	lsp.DidChangeTextDocument: handleDidChangeTextDocument,
-	lsp.Hover:                 handleHover,
-	lsp.Definition:            handleDefinition,
-	lsp.Completion:            handleCompletion,
-	lsp.Formatting:            handleFormatting,
+	lsp.Initialize:                handleInitialize,
+	lsp.DidOpenTextDocument:       handleDidOpenTextDocument,
+	lsp.DidChangeTextDocument:     handleDidChangeTextDocument,
+	lsp.Hover:                     handleHover,
+	lsp.Definition:                handleDefinition,
+	lsp.Completion:                handleCompletion,
+	lsp.Formatting:                handleFormatting,
+	lsp.DidChangeWorkspaceFolders: handleDidChangeWorkspaceFolders,
 }
 
 func handleMessage(
@@ -34,11 +35,11 @@ func handleMessage(
 ) {
 	handler, ok := handlers[lsp.Method(method)]
 	if !ok {
-		logger.Printf("Unsupported method: %s", method)
+		logger.Printf("unsupported method: %s", method)
 		return
 	}
 
-	logger.Printf("Received message with method: %s", method)
+	logger.Printf("received message with method: %s", method)
 	handler(logger, writer, state, contents)
 }
 
@@ -50,10 +51,14 @@ func handleInitialize(logger *log.Logger, writer io.Writer, state analysis.State
 	}
 
 	logger.Printf(
-		"Connected to: %s %s",
+		"connected to: %s %s",
 		request.Params.ClientInfo.Name,
 		request.Params.ClientInfo.Version,
 	)
+
+	if folders := request.Params.WorkspaceFolders; folders != nil {
+		state.AddWorkspaceFolders(folders)
+	}
 
 	msg := lsp.NewInitializeResponse(request.ID)
 	writeResponse(writer, msg)
@@ -66,7 +71,7 @@ func handleDidOpenTextDocument(logger *log.Logger, writer io.Writer, state analy
 		return
 	}
 
-	logger.Printf("Opened: %s", request.Params.TextDocument.URI)
+	logger.Printf("opened: %s", request.Params.TextDocument.URI)
 	diagnostics := state.OpenDocument(request.Params.TextDocument.URI, request.Params.TextDocument.Text)
 	writeResponse(writer, lsp.PublishDiagnosticsNotification{
 		Notification: lsp.NewNotification(lsp.PublishDiagnostics),
@@ -75,7 +80,7 @@ func handleDidOpenTextDocument(logger *log.Logger, writer io.Writer, state analy
 			Diagnostics: diagnostics,
 		},
 	})
-	logger.Printf("Published %d diagnostics", len(diagnostics))
+	logger.Printf("published %d diagnostics", len(diagnostics))
 }
 
 func handleDidChangeTextDocument(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
@@ -85,9 +90,10 @@ func handleDidChangeTextDocument(logger *log.Logger, writer io.Writer, state ana
 		return
 	}
 
-	logger.Printf("Changed: %s", request.Params.TextDocument.URI)
+	logger.Printf("changed document: %s", request.Params.TextDocument.URI)
 	diagnostics := make([]lsp.Diagnostic, 0)
 	contentChangesLen := len(request.Params.ContentChanges)
+	// HACK: only considering the final change
 	if contentChangesLen > 0 {
 		lastChangeEvent := request.Params.ContentChanges[contentChangesLen-1]
 		diagnostics = append(diagnostics, state.UpdateDocument(request.Params.TextDocument.URI, lastChangeEvent.Text)...)
@@ -99,7 +105,7 @@ func handleDidChangeTextDocument(logger *log.Logger, writer io.Writer, state ana
 			Diagnostics: diagnostics,
 		},
 	})
-	logger.Printf("Published %d diagnostics", len(diagnostics))
+	logger.Printf("published %d diagnostics", len(diagnostics))
 }
 
 func handleHover(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
@@ -144,7 +150,24 @@ func handleFormatting(logger *log.Logger, writer io.Writer, state analysis.State
 
 	msg := state.Format(request.ID, request.Params.TextDocument.URI)
 	writeResponse(writer, msg)
-	logger.Printf("Formatted: %s", request.Params.TextDocument.URI)
+	logger.Printf("formatted: %s", request.Params.TextDocument.URI)
+}
+
+func handleDidChangeWorkspaceFolders(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
+	var request lsp.DidChangeWorkspaceFoldersNotifications
+	if err := json.Unmarshal(contents, &request); err != nil {
+		logger.Printf("error parsing %s request: %s", lsp.DidChangeTextDocument, err)
+		return
+	}
+
+	logger.Printf(
+		"changed workspace: +%d folders, - %d folders",
+		len(request.Params.Event.Added),
+		len(request.Params.Event.Removed),
+	)
+
+	state.AddWorkspaceFolders(request.Params.Event.Added)
+	state.RemoveWorkspaceFolders(request.Params.Event.Removed)
 }
 
 func writeResponse(writer io.Writer, msg any) error {
@@ -162,19 +185,19 @@ func writeResponse(writer io.Writer, msg any) error {
 
 func main() {
 	logger := log.NewLogger(lsp.Name)
-	logger.Println("Started lsp")
+	logger.Println("started lsp")
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(rpc.Split)
 
-	state := analysis.NewState()
+	state := analysis.NewState(logger)
 	writer := os.Stdout
 
 	for scanner.Scan() {
 		msg := scanner.Bytes()
 		method, contents, err := rpc.DecodeMessage(msg)
 		if err != nil {
-			logger.Printf("Decoding error: %s", err)
+			logger.Printf("decoding error: %s", err)
 			continue
 		}
 		handleMessage(logger, writer, state, method, contents)
