@@ -178,8 +178,8 @@ func handleDidChangeWorkspaceFolders(logger *log.Logger, writer io.Writer, state
 		len(request.Params.Event.Removed),
 	)
 
-	state.AddWorkspaceFolders(request.Params.Event.Added)
 	state.RemoveWorkspaceFolders(request.Params.Event.Removed)
+	state.AddWorkspaceFolders(request.Params.Event.Added)
 }
 
 func writeResponse(writer io.Writer, msg any) error {
