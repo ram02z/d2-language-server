@@ -52,15 +52,19 @@ func NewInitializeResponse(id int) InitializeResponse {
 				// Documents are synced by always sending the full content of the document
 				TextDocumentSync: 1,
 				CompletionProvider: CompletionOptions{
-					TriggerCharacters: []string{".", ":", "@"},
-					ResolveProvider:   true,
+					TriggerCharacters: []string{
+						"@",
+						// ".",
+						// ":",
+					},
+					ResolveProvider: true,
 				},
 				HoverProvider:              true,
 				DefinitionProvider:         true,
 				DocumentFormattingProvider: true,
 				Workspace: Workspace{
 					WorkspaceFolders: WorkspaceFoldersServerCapabilities{
-						Supported: true,
+						Supported:           true,
 						ChangeNotifications: true,
 					},
 				},

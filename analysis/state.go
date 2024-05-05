@@ -2,6 +2,10 @@ package analysis
 
 import (
 	"context"
+	"io/fs"
+	"net/url"
+	"path/filepath"
+	"strings"
 
 	"github.com/ram02z/d2-language-server/log"
 	"github.com/ram02z/d2-language-server/lsp"
@@ -102,6 +106,48 @@ func (s *State) Definition(id int, uri string, position lsp.Position) lsp.Defini
 	}
 }
 
+func (s *State) ImportCompletion(id int, uri string, position lsp.Position) lsp.CompletionResponse {
+	var files []string
+	path := getPathFromURI(uri)
+	root := filepath.Dir(path)
+	if len(s.WorkspaceFolders) == 0 {
+		files = findFilesByExt(root, ".d2")
+	} else {
+		for uri := range s.WorkspaceFolders {
+			path := getPathFromURI(uri)
+			folderPaths := findFilesByExt(path, ".d2")
+			files = append(files, folderPaths...)
+		}
+	}
+
+	items := []lsp.CompletionItem{}
+	for _, file := range files {
+		if file == path {
+			continue
+		}
+
+		relPath, err := filepath.Rel(root, file)
+		if err != nil {
+			s.logger.Printf("d2 does not support absolute imports: %v", err)
+			continue
+		}
+
+		fileName := strings.TrimSuffix(relPath, filepath.Ext(relPath))
+
+		items = append(items, lsp.CompletionItem{
+			Label: fileName,
+			Kind:  lsp.CompletionItemKindFile,
+		})
+	}
+
+	response := lsp.CompletionResponse{
+		Response: lsp.NewResponse(id),
+		Result:   items,
+	}
+
+	return response
+}
+
 func (s *State) TextDocumentCompletion(id int, uri string, position lsp.Position) lsp.CompletionResponse {
 	items := []lsp.CompletionItem{
 		{
@@ -164,7 +210,6 @@ func parseDocument(ctx context.Context, text string) Document {
 
 	errors := []d2ast.Error{}
 	if err != nil {
-
 		errors = err.(*d2parser.ParseError).Errors
 	}
 
@@ -186,4 +231,28 @@ func getNodeUnderCursor(ast d2ast.Map, position lsp.Position) *d2ast.MapNode {
 	}
 
 	return nil
+}
+
+func findFilesByExt(root, ext string) []string {
+	files := []string{}
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if filepath.Ext(d.Name()) == ext {
+			files = append(files, path)
+		}
+		return nil
+	})
+
+	return files
+}
+
+// TODO: return error
+func getPathFromURI(uri string) string {
+	u, err := url.ParseRequestURI(uri)
+	if err != nil {
+		return ""
+	}
+	return u.Path
 }
