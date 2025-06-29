@@ -1,14 +1,14 @@
 package lsp
 
 type TextDocumentItem struct {
-	URI        string `json:"uri"`
-	LanguageID string `json:"languageId"`
-	Version    int    `json:"version"`
-	Text       string `json:"text"`
+	URI        DocumentURI `json:"uri"`
+	LanguageID string      `json:"languageId"`
+	Version    int         `json:"version"`
+	Text       string      `json:"text"`
 }
 
 type TextDocumentIdentifier struct {
-	URI string `json:"uri"`
+	URI DocumentURI `json:"uri"`
 }
 
 type VersionTextDocumentIdentifier struct {
@@ -27,7 +27,7 @@ type Position struct {
 }
 
 type Location struct {
-	URI   string `json:"uri"`
+	URI   DocumentURI `json:"uri"`
 	Range Range  `json:"range"`
 }
 

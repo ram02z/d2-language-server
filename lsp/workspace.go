@@ -11,7 +11,7 @@ type WorkspaceFoldersServerCapabilities struct {
 }
 
 type WorkspaceFolder struct {
-	URI  string `json:"uri"`
+	URI  URI `json:"uri"`
 	Name string `json:"name"`
 }
 
@@ -39,7 +39,7 @@ type DidChangeWatchedFilesParams struct {
 }
 
 type FileEvent struct {
-	URI  string         `json:"uri"`
+	URI  DocumentURI    `json:"uri"`
 	Type FileChangeType `json:"type"`
 }
 

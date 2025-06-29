@@ -11,7 +11,6 @@ import (
 	"github.com/ram02z/d2-language-server/log"
 	"github.com/ram02z/d2-language-server/lsp"
 	"github.com/ram02z/d2-language-server/rpc"
-	"github.com/ram02z/d2-language-server/utils"
 )
 
 type HandlerFunc func(*log.Logger, io.Writer, analysis.State, []byte)
@@ -223,12 +222,7 @@ func handleDidChangeWatchedFiles(logger *log.Logger, writer io.Writer, state ana
 	}
 
 	for _, change := range request.Params.Changes {
-		path, err := utils.GetPathFromURI(change.URI)
-		if err != nil {
-			logger.Printf("could not get path from uri: %s", err)
-			continue
-		}
-		state.UpdateFile(path, change.Type)
+		state.UpdateFile(change.URI.Filename(), change.Type)
 	}
 }
 
