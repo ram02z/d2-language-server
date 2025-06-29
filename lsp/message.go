@@ -1,42 +1,19 @@
 package lsp
 
 import (
-	"encoding/json"
-	"strconv"
-
 	"github.com/google/uuid"
 )
 
-type RequestID string
-
-func (id *RequestID) UnmarshalJSON(data []byte) error {
-	if data[0] == '"' {
-		var s string
-		if err := json.Unmarshal(data, &s); err != nil {
-			return err
-		}
-		*id = RequestID(s)
-		return nil
-	}
-
-	var i int
-	if err := json.Unmarshal(data, &i); err != nil {
-		return err
-	}
-	*id = RequestID(strconv.Itoa(i))
-	return nil
-}
-
 type Request struct {
-	RPC    string    `json:"jsonrpc"`
-	Method string    `json:"method"`
-	ID     RequestID `json:"id"`
-	Params any       `json:"params,omitempty"`
+	RPC    string `json:"jsonrpc"`
+	Method string `json:"method"`
+	ID     any    `json:"id"` // int32 | string
+	Params any    `json:"params,omitempty"`
 }
 
 type Response struct {
 	RPC   string         `json:"jsonrpc"`
-	ID    *RequestID     `json:"id,omitempty"`
+	ID    *any           `json:"id,omitempty"` // int32 | string
 	Error *ResponseError `json:"error,omitempty"`
 }
 
@@ -59,12 +36,12 @@ func NewRequestWithParams(method Method, params any) Request {
 	return Request{
 		RPC:    JsonRpc,
 		Method: string(method),
-		ID:     RequestID(uuid.New().String()),
+		ID:     uuid.New().String(),
 		Params: params,
 	}
 }
 
-func NewResponse(id RequestID) Response {
+func NewResponse(id any) Response {
 	return Response{
 		RPC: JsonRpc,
 		ID:  &id,

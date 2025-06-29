@@ -107,7 +107,7 @@ func (s *State) UpdateFile(path string, event lsp.FileChangeType) {
 	}
 }
 
-func (s *State) Hover(id lsp.RequestID, uri lsp.DocumentURI, position lsp.Position) lsp.HoverResponse {
+func (s *State) Hover(id any, uri lsp.DocumentURI, position lsp.Position) lsp.HoverResponse {
 	document := s.Documents[uri]
 	node := getNodeUnderCursor(*document.AST, position)
 
@@ -124,7 +124,7 @@ func (s *State) Hover(id lsp.RequestID, uri lsp.DocumentURI, position lsp.Positi
 	}
 }
 
-func (s *State) Definition(id lsp.RequestID, uri lsp.DocumentURI, position lsp.Position) lsp.DefinitionResponse {
+func (s *State) Definition(id any, uri lsp.DocumentURI, position lsp.Position) lsp.DefinitionResponse {
 	return lsp.DefinitionResponse{
 		Response: lsp.NewResponse(id),
 		Result: lsp.Location{
@@ -143,7 +143,7 @@ func (s *State) Definition(id lsp.RequestID, uri lsp.DocumentURI, position lsp.P
 	}
 }
 
-func (s *State) ImportCompletion(id lsp.RequestID, uri lsp.DocumentURI, position lsp.Position) lsp.CompletionResponse {
+func (s *State) ImportCompletion(id any, uri lsp.DocumentURI, position lsp.Position) lsp.CompletionResponse {
 	var files []string
 	path := uri.Filename()
 	root := filepath.Dir(path)
@@ -184,7 +184,7 @@ func (s *State) ImportCompletion(id lsp.RequestID, uri lsp.DocumentURI, position
 	return response
 }
 
-func (s *State) TextDocumentCompletion(id lsp.RequestID, uri lsp.DocumentURI, position lsp.Position) lsp.CompletionResponse {
+func (s *State) TextDocumentCompletion(id any, uri lsp.DocumentURI, position lsp.Position) lsp.CompletionResponse {
 	d2Items, err := d2lsp.GetCompletionItems(s.Documents[uri].Text, position.Line, position.Character)
 	if err != nil {
 		s.logger.Printf("Error while getting completion items: %v", err)
@@ -205,7 +205,7 @@ func (s *State) TextDocumentCompletion(id lsp.RequestID, uri lsp.DocumentURI, po
 	}
 }
 
-func (s *State) Format(id lsp.RequestID, uri lsp.DocumentURI) lsp.FormattingResponse {
+func (s *State) Format(id any, uri lsp.DocumentURI) lsp.FormattingResponse {
 	document := s.Documents[uri]
 
 	formattedText := d2format.Format(document.AST)

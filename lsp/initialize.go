@@ -49,7 +49,7 @@ type ServerInfo struct {
 	Version string `json:"version"`
 }
 
-func NewInitializeResponse(id RequestID) InitializeResponse {
+func NewInitializeResponse(id any) InitializeResponse {
 	return InitializeResponse{
 		Response: NewResponse(id),
 		Result: InitializeResult{
