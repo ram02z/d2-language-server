@@ -33,6 +33,7 @@ type CompletionItem struct {
 	Detail        string             `json:"detail"`
 	Documentation string             `json:"documentation"`
 	Kind          CompletionItemKind `json:"kind"`
+	InsertText    string             `json:"insertText"`
 }
 
 type CompletionItemKind int

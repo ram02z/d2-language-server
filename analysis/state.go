@@ -12,6 +12,7 @@ import (
 	"oss.terrastruct.com/d2/d2ast"
 	"oss.terrastruct.com/d2/d2format"
 	"oss.terrastruct.com/d2/d2lib"
+	"oss.terrastruct.com/d2/d2lsp"
 	"oss.terrastruct.com/d2/d2parser"
 )
 
@@ -184,20 +185,24 @@ func (s *State) ImportCompletion(id lsp.RequestID, uri lsp.DocumentURI, position
 }
 
 func (s *State) TextDocumentCompletion(id lsp.RequestID, uri lsp.DocumentURI, position lsp.Position) lsp.CompletionResponse {
-	items := []lsp.CompletionItem{
-		{
-			Label:         "Test",
-			Detail:        "Lorem Ipsum",
-			Documentation: "Fake documentation",
-		},
+	d2Items, err := d2lsp.GetCompletionItems(s.Documents[uri].Text, position.Line, position.Character)
+	if err != nil {
+		s.logger.Printf("Error while getting completion items: %v", err)
+		return lsp.CompletionResponse{
+			Response: lsp.NewResponse(id),
+			Result:   []lsp.CompletionItem{},
+		}
 	}
 
-	response := lsp.CompletionResponse{
+	lspItems := make([]lsp.CompletionItem, len(d2Items))
+	for i, d2Item := range d2Items {
+		lspItems[i] = mapToLspCompletionItem(d2Item)
+	}
+
+	return lsp.CompletionResponse{
 		Response: lsp.NewResponse(id),
-		Result:   items,
+		Result:   lspItems,
 	}
-
-	return response
 }
 
 func (s *State) Format(id lsp.RequestID, uri lsp.DocumentURI) lsp.FormattingResponse {
@@ -281,4 +286,20 @@ func findFilesByExt(root, ext string) []string {
 	})
 
 	return files
+}
+
+func mapToLspCompletionItem(d2Item d2lsp.CompletionItem) lsp.CompletionItem {
+	return lsp.CompletionItem{
+		Label:         d2Item.Label,
+		Documentation: d2Item.Detail,
+		Kind:          mapToLspCompletionItemKind(d2Item.Kind),
+		InsertText:    d2Item.InsertText,
+	}
+}
+
+func mapToLspCompletionItemKind(d2Kind d2lsp.CompletionKind) lsp.CompletionItemKind {
+	if d2Kind == d2lsp.StyleCompletion {
+		return lsp.CompletionItemKindProperty
+	}
+	return lsp.CompletionItemKindKeyword
 }

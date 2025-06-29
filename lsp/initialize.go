@@ -35,8 +35,13 @@ type ServerCapabilities struct {
 }
 
 type CompletionOptions struct {
-	TriggerCharacters []string `json:"triggerCharacters"`
-	ResolveProvider   bool     `json:"resolveProvider"`
+	TriggerCharacters []string              `json:"triggerCharacters"`
+	ResolveProvider   bool                  `json:"resolveProvider"`
+	CompletionItem    CompletionItemOptions `json:"completionItem"`
+}
+
+type CompletionItemOptions struct {
+	LabelDetailsSupport bool `json:"lableDetailsSupport"`
 }
 
 type ServerInfo struct {
@@ -54,10 +59,13 @@ func NewInitializeResponse(id RequestID) InitializeResponse {
 				CompletionProvider: CompletionOptions{
 					TriggerCharacters: []string{
 						"@",
-						// ".",
-						// ":",
+						".",
+						":",
 					},
 					ResolveProvider: true,
+					CompletionItem:  CompletionItemOptions{
+						LabelDetailsSupport: false,
+					},
 				},
 				HoverProvider:              true,
 				DefinitionProvider:         true,

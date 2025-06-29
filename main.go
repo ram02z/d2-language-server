@@ -175,11 +175,14 @@ func handleCompletion(logger *log.Logger, writer io.Writer, state analysis.State
 	}
 
 	var msg lsp.CompletionResponse
-	if request.Params.Context.TriggerKind == lsp.TriggerCharacter {
+	switch request.Params.Context.TriggerKind {
+	case lsp.TriggerCharacter:
 		if request.Params.Context.TriggerCharacter == "@" {
 			msg = state.ImportCompletion(request.ID, request.Params.TextDocument.URI, request.Params.Position)
+		} else {
+			msg = state.TextDocumentCompletion(request.ID, request.Params.TextDocument.URI, request.Params.Position)
 		}
-	} else {
+	case lsp.Invoked:
 		msg = state.TextDocumentCompletion(request.ID, request.Params.TextDocument.URI, request.Params.Position)
 	}
 	writeResponse(writer, msg)
