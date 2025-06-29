@@ -11,6 +11,7 @@ import (
 	"github.com/ram02z/d2-language-server/log"
 	"github.com/ram02z/d2-language-server/lsp"
 	"github.com/ram02z/d2-language-server/rpc"
+	"github.com/ram02z/d2-language-server/utils"
 )
 
 type HandlerFunc func(*log.Logger, io.Writer, analysis.State, []byte)
@@ -25,6 +26,7 @@ var handlers = map[lsp.Method]HandlerFunc{
 	lsp.Completion:                handleCompletion,
 	lsp.Formatting:                handleFormatting,
 	lsp.DidChangeWorkspaceFolders: handleDidChangeWorkspaceFolders,
+	lsp.DidChangeWatchedFiles:     handleDidChangeWatchedFiles,
 }
 
 func handleMessage(
@@ -62,7 +64,31 @@ func handleInitialize(logger *log.Logger, writer io.Writer, state analysis.State
 	}
 
 	msg := lsp.NewInitializeResponse(request.ID)
-	writeResponse(writer, msg)
+	if err := writeResponse(writer, msg); err != nil {
+		logger.Printf("could not write response: %s", err)
+	}
+
+	registerCapabilityRequest := lsp.NewRequestWithParams(
+		lsp.ClientRegisterCapability,
+		lsp.RegistrationParams{
+			Registrations: []lsp.Registration{
+				lsp.NewRegistration(
+					lsp.DidChangeWatchedFiles,
+					lsp.DidChangeWatchedFilesRegistrationOptions{
+						Watchers: []lsp.FileSystemWatcher{
+							{
+								GlobPattern: "**/*.d2",
+							},
+						},
+					},
+				),
+			},
+		},
+	)
+
+	if err := writeResponse(writer, registerCapabilityRequest); err != nil {
+		logger.Printf("could not register capability: %s", err)
+	}
 }
 
 func handleDidOpenTextDocument(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
@@ -187,6 +213,23 @@ func handleDidChangeWorkspaceFolders(logger *log.Logger, writer io.Writer, state
 
 	state.RemoveWorkspaceFolders(request.Params.Event.Removed)
 	state.AddWorkspaceFolders(request.Params.Event.Added)
+}
+
+func handleDidChangeWatchedFiles(logger *log.Logger, writer io.Writer, state analysis.State, contents []byte) {
+	var request lsp.DidChangeWatchedFilesNotification
+	if err := json.Unmarshal(contents, &request); err != nil {
+		logger.Printf("error parsing %s request: %s", lsp.DidChangeWatchedFiles, err)
+		return
+	}
+
+	for _, change := range request.Params.Changes {
+		path, err := utils.GetPathFromURI(change.URI)
+		if err != nil {
+			logger.Printf("could not get path from uri: %s", err)
+			continue
+		}
+		state.UpdateFile(path, change.Type)
+	}
 }
 
 func writeResponse(writer io.Writer, msg any) error {

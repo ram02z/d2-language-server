@@ -3,23 +3,30 @@ package analysis
 import (
 	"context"
 	"io/fs"
-	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/ram02z/d2-language-server/log"
 	"github.com/ram02z/d2-language-server/lsp"
+	"github.com/ram02z/d2-language-server/utils"
 	"oss.terrastruct.com/d2/d2ast"
 	"oss.terrastruct.com/d2/d2format"
 	"oss.terrastruct.com/d2/d2lib"
 	"oss.terrastruct.com/d2/d2parser"
 )
 
+type URI = string
+
 type State struct {
-	Documents map[string]Document
-	// URI: Name
-	WorkspaceFolders map[string]string
+	Documents        map[string]Document
+	WorkspaceFolders map[URI]Workspace
 	logger           *log.Logger
+}
+
+type Workspace struct {
+	Name  string
+	Files []string
 }
 
 type Document struct {
@@ -31,14 +38,23 @@ type Document struct {
 func NewState(logger *log.Logger) State {
 	return State{
 		Documents:        map[string]Document{},
-		WorkspaceFolders: map[string]string{},
+		WorkspaceFolders: map[string]Workspace{},
 		logger:           logger,
 	}
 }
 
 func (s *State) AddWorkspaceFolders(folders []lsp.WorkspaceFolder) {
 	for _, folder := range folders {
-		s.WorkspaceFolders[folder.URI] = folder.Name
+		path, err := utils.GetPathFromURI(folder.URI)
+		if err != nil {
+			s.logger.Print(err)
+			continue
+		}
+		folderPaths := findFilesByExt(path, ".d2")
+		s.WorkspaceFolders[folder.URI] = Workspace{
+			Name:  folder.Name,
+			Files: folderPaths,
+		}
 		s.logger.Printf("added '%s' to workspace", folder.URI)
 	}
 }
@@ -70,7 +86,41 @@ func (s *State) RemoveDocument(uri string) {
 	delete(s.Documents, uri)
 }
 
-func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverResponse {
+func (s *State) UpdateFile(path string, event lsp.FileChangeType) {
+	// TODO: This is inefficient and doesn't scale well with many workspace folders.
+	// A better approach would be to find the parent workspace folder directly from the file's path
+	// instead of iterating through all of them. This could be done by iterating up the file's
+	// path components or by using a more efficient data structure for lookups (like a trie).
+	for uri, workspace := range s.WorkspaceFolders {
+		workspacePath, err := utils.GetPathFromURI(uri)
+		if err != nil {
+			s.logger.Printf("could not get path from uri: %s", err)
+			continue
+		}
+
+		if !strings.HasPrefix(path, workspacePath) {
+			continue
+		}
+
+		switch event {
+		case lsp.Created:
+			workspace.Files = append(workspace.Files, path)
+			s.WorkspaceFolders[uri] = workspace
+			s.logger.Printf("added %s to %s", path, workspace.Name)
+		case lsp.Deleted:
+			for i, file := range workspace.Files {
+				if file == path {
+					workspace.Files = slices.Delete(workspace.Files, i, i+1)
+					s.WorkspaceFolders[uri] = workspace
+					s.logger.Printf("removed %s from %s", path, workspace.Name)
+					break
+				}
+			}
+		}
+	}
+}
+
+func (s *State) Hover(id lsp.RequestID, uri string, position lsp.Position) lsp.HoverResponse {
 	document := s.Documents[uri]
 	node := getNodeUnderCursor(*document.AST, position)
 
@@ -87,7 +137,7 @@ func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverRespon
 	}
 }
 
-func (s *State) Definition(id int, uri string, position lsp.Position) lsp.DefinitionResponse {
+func (s *State) Definition(id lsp.RequestID, uri string, position lsp.Position) lsp.DefinitionResponse {
 	return lsp.DefinitionResponse{
 		Response: lsp.NewResponse(id),
 		Result: lsp.Location{
@@ -106,17 +156,22 @@ func (s *State) Definition(id int, uri string, position lsp.Position) lsp.Defini
 	}
 }
 
-func (s *State) ImportCompletion(id int, uri string, position lsp.Position) lsp.CompletionResponse {
+func (s *State) ImportCompletion(id lsp.RequestID, uri string, position lsp.Position) lsp.CompletionResponse {
 	var files []string
-	path := getPathFromURI(uri)
+	path, err := utils.GetPathFromURI(uri)
+	if err != nil {
+		s.logger.Print(err)
+		return lsp.CompletionResponse{
+			Response: lsp.NewResponse(id),
+			Result:   []lsp.CompletionItem{},
+		}
+	}
 	root := filepath.Dir(path)
 	if len(s.WorkspaceFolders) == 0 {
 		files = findFilesByExt(root, ".d2")
 	} else {
-		for uri := range s.WorkspaceFolders {
-			path := getPathFromURI(uri)
-			folderPaths := findFilesByExt(path, ".d2")
-			files = append(files, folderPaths...)
+		for _, workspace := range s.WorkspaceFolders {
+			files = append(files, workspace.Files...)
 		}
 	}
 
@@ -132,6 +187,7 @@ func (s *State) ImportCompletion(id int, uri string, position lsp.Position) lsp.
 			continue
 		}
 
+		// D2 formatter gets rid of the suffix
 		fileName := strings.TrimSuffix(relPath, filepath.Ext(relPath))
 
 		items = append(items, lsp.CompletionItem{
@@ -148,7 +204,7 @@ func (s *State) ImportCompletion(id int, uri string, position lsp.Position) lsp.
 	return response
 }
 
-func (s *State) TextDocumentCompletion(id int, uri string, position lsp.Position) lsp.CompletionResponse {
+func (s *State) TextDocumentCompletion(id lsp.RequestID, uri string, position lsp.Position) lsp.CompletionResponse {
 	items := []lsp.CompletionItem{
 		{
 			Label:         "Test",
@@ -165,7 +221,7 @@ func (s *State) TextDocumentCompletion(id int, uri string, position lsp.Position
 	return response
 }
 
-func (s *State) Format(id int, uri string) lsp.FormattingResponse {
+func (s *State) Format(id lsp.RequestID, uri string) lsp.FormattingResponse {
 	document := s.Documents[uri]
 
 	formattedText := d2format.Format(document.AST)
@@ -246,13 +302,4 @@ func findFilesByExt(root, ext string) []string {
 	})
 
 	return files
-}
-
-// TODO: return error
-func getPathFromURI(uri string) string {
-	u, err := url.ParseRequestURI(uri)
-	if err != nil {
-		return ""
-	}
-	return u.Path
 }

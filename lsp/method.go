@@ -13,4 +13,6 @@ const (
 	Completion                Method = "textDocument/completion"
 	Formatting                Method = "textDocument/formatting"
 	DidChangeWorkspaceFolders Method = "workspace/didChangeWorkspaceFolders"
+	DidChangeWatchedFiles     Method = "workspace/didChangeWatchedFiles"
+	ClientRegisterCapability  Method = "client/registerCapability"
 )
