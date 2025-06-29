@@ -62,7 +62,7 @@ func NewInitializeResponse(id RequestID) InitializeResponse {
 						".",
 						":",
 					},
-					ResolveProvider: true,
+					ResolveProvider: false,
 					CompletionItem:  CompletionItemOptions{
 						LabelDetailsSupport: false,
 					},

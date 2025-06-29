@@ -290,10 +290,10 @@ func findFilesByExt(root, ext string) []string {
 
 func mapToLspCompletionItem(d2Item d2lsp.CompletionItem) lsp.CompletionItem {
 	return lsp.CompletionItem{
-		Label:         d2Item.Label,
-		Documentation: d2Item.Detail,
-		Kind:          mapToLspCompletionItemKind(d2Item.Kind),
-		InsertText:    d2Item.InsertText,
+		Label:      d2Item.Label,
+		Detail:     d2Item.Detail,
+		Kind:       mapToLspCompletionItemKind(d2Item.Kind),
+		InsertText: d2Item.InsertText,
 	}
 }
 
